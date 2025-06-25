@@ -36,12 +36,12 @@ uv run remove-silence.py --help
 
 ### Command Line Options
 
-| Option            | Description                               | Default    |
-| ----------------- | ----------------------------------------- | ---------- |
-| `-i, --input`     | Input video file (required)               | -          |
-| `-t, --threshold` | Noise threshold (e.g., -30dB)             | -30dB      |
-| `-d, --duration`  | Minimum silence duration to cut (seconds) | 0.1        |
-| `-o, --output`    | Output file name                          | output.mp4 |
+| Option            | Description                               | Default |
+| ----------------- | ----------------------------------------- | ------- |
+| `-t, --threshold` | Noise threshold (e.g., -30dB)             | -30dB   |
+| `-d, --duration`  | Minimum silence duration to cut (seconds) | 0.1     |
+| `-i, --input`     | Input video file (required)               | -       |
+| `-o, --output`    | Output file name (required)               | -       |
 
 ### Examples
 

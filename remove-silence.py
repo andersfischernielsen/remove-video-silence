@@ -420,7 +420,7 @@ def main():
         default=0.1,
         help="Minimum silence duration to cut (seconds, default: 0.1)",
     )
-    parser.add_argument("-o", "--output", default="output.mp4", help="Output file name")
+    parser.add_argument("-o", "--output", required=True, help="Output file name")
 
     args = parser.parse_args()
 
