@@ -4,7 +4,7 @@ A command-line tool that automatically detects and removes silence from video fi
 
 ## Features
 
-- ✨ **Automatic silence detection** using FFmpeg's silencedetect filter
+- ✨ **Automatic silence detection** using FFmpeg's `silencedetect` filter
 - 🎯 **Configurable thresholds** for noise level and minimum silence duration
 
 ## Requirements
@@ -42,19 +42,18 @@ uv run remove-silence.py --help
 | `-t, --threshold` | Noise threshold (e.g., -30dB)             | -30dB      |
 | `-d, --duration`  | Minimum silence duration to cut (seconds) | 0.1        |
 | `-o, --output`    | Output file name                          | output.mp4 |
-| `--max-segments`  | Maximum number of segments to process     | 100        |
 
 ### Examples
 
 ```bash
 # Remove silences quieter than -30dB lasting 0.1+ seconds
-uv run remove-silence.py -i lecture.mp4
+./remove-silence.py -i lecture.mp4
 
 # More aggressive: remove silences quieter than -25dB lasting 0.5+ seconds
-uv run remove-silence.py -i podcast.mp4 -t -25dB -d 0.5
+./remove-silence.py -i podcast.mp4 -t -25dB -d 0.5
 
 # Process a webm file with custom output name
-uv run remove-silence.py -i recording.webm -o clean_recording.mp4
+./remove-silence.py -i recording.webm -o clean_recording.mp4
 ```
 
 ## Implementation

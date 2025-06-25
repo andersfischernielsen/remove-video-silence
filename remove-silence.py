@@ -421,12 +421,7 @@ def main():
         help="Minimum silence duration to cut (seconds, default: 0.1)",
     )
     parser.add_argument("-o", "--output", default="output.mp4", help="Output file name")
-    parser.add_argument(
-        "--max-segments",
-        type=int,
-        default=100,
-        help="Maximum number of segments to process (default: 100)",
-    )
+
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
