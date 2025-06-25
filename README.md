@@ -1,4 +1,4 @@
-# Video Silence Removal Tool
+# Video Silence Removal Tool (Smart Speed)
 
 A command-line tool that automatically detects and removes silence from video files using FFmpeg.
 
