@@ -6,6 +6,7 @@ A command-line tool that automatically detects and removes silence from video fi
 
 - ✨ **Automatic silence detection** using FFmpeg's `silencedetect` filter
 - 🎯 **Configurable thresholds** for noise level and minimum silence duration
+- 🎬 **Progressive output** - watch your video while it's being processed (MP4 format)
 
 ## Requirements
 
@@ -29,6 +30,10 @@ uv run remove-silence.py -i input.mp4 -t -35dB -d 0.5
 uv run remove-silence.py -i input.mp4 -o cleaned_video.mp4
 ./remove-silence.py -i input.mp4 -o cleaned_video.mp4
 
+# Enable progressive output (watch while processing)
+uv run remove-silence.py -i input.mp4 -o output.mp4 --progressive
+./remove-silence.py -i input.mp4 -o output.mp4 --progressive
+
 # Show help
 uv run remove-silence.py --help
 ./remove-silence.py --help
@@ -36,12 +41,13 @@ uv run remove-silence.py --help
 
 ### Command Line Options
 
-| Option            | Description                               | Default |
-| ----------------- | ----------------------------------------- | ------- |
-| `-t, --threshold` | Noise threshold (e.g., -30dB)             | -30dB   |
-| `-d, --duration`  | Minimum silence duration to cut (seconds) | 0.1     |
-| `-i, --input`     | Input video file (required)               | -       |
-| `-o, --output`    | Output file name (required)               | -       |
+| Option            | Description                                        | Default  |
+| ----------------- | -------------------------------------------------- | -------- |
+| `-t, --threshold` | Noise threshold (e.g., -30dB)                      | -30dB    |
+| `-d, --duration`  | Minimum silence duration to cut (seconds)          | 0.1      |
+| `-i, --input`     | Input video file (required)                        | -        |
+| `-o, --output`    | Output file name (required)                        | -        |
+| `--progressive`   | Enable progressive output (watch while processing) | disabled |
 
 ### Examples
 
@@ -54,6 +60,9 @@ uv run remove-silence.py --help
 
 # Process a webm file with custom output name
 ./remove-silence.py -i recording.webm -o clean_recording.mp4
+
+# Enable progressive output for long videos (watch while processing)
+./remove-silence.py -i long_lecture.mp4 -o processed_lecture.mp4 --progressive
 ```
 
 ## Implementation

@@ -9,6 +9,7 @@
 import argparse
 import os
 import re
+import signal
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -54,6 +55,10 @@ def run_command(cmd: str, description: str = "", capture_output: bool = True):
             console.print(error_msg)
 
         return result
+    except KeyboardInterrupt:
+        if description:
+            console.print(f"[yellow]Interrupted during {description}[/yellow]")
+        raise
     except Exception as e:
         if description:
             console.print(f"[red]Command failed in {description}:[/red] {e}")
@@ -176,6 +181,7 @@ def create_filter_complex_cmd(
     keep_intervals: list[tuple[float, float]],
     output_file: str,
     progress_file: str | None = None,
+    enable_progressive: bool = False,
 ):
     if not keep_intervals:
         return None
@@ -206,6 +212,9 @@ def create_filter_complex_cmd(
         f"-c:a aac -b:a 192k "
     )
 
+    if enable_progressive and output_file.lower().endswith(".mp4"):
+        cmd += " -movflags +faststart+frag_keyframe+empty_moov"
+
     if progress_file:
         cmd += f' -progress "{progress_file}"'
 
@@ -228,29 +237,39 @@ def run_ffmpeg_with_progress(
     )
 
     last_time = 0
-    while True:
-        output = process.stderr.readline()
-        if output == "" and process.poll() is not None:
-            break
+    try:
+        while True:
+            output = process.stderr.readline()
+            if output == "" and process.poll() is not None:
+                break
 
-        if output:
-            time_match = re.search(r"time=(\d+):(\d+):(\d+)\.(\d+)", output)
-            if time_match:
-                hours, minutes, seconds, centiseconds = map(int, time_match.groups())
-                current_time = (
-                    hours * 3600 + minutes * 60 + seconds + centiseconds / 100
-                )
-
-                if current_time > last_time and total_duration > 0:
-                    percentage = min((current_time / total_duration) * 100, 100)
-                    progress_obj.update(
-                        progress_task,
-                        completed=percentage,
-                        description=f"Processing video: {percentage:.1f}%",
+            if output:
+                time_match = re.search(r"time=(\d+):(\d+):(\d+)\.(\d+)", output)
+                if time_match:
+                    hours, minutes, seconds, centiseconds = map(
+                        int, time_match.groups()
                     )
-                    last_time = current_time
+                    current_time = (
+                        hours * 3600 + minutes * 60 + seconds + centiseconds / 100
+                    )
 
-    stdout, stderr = process.communicate()
+                    if current_time > last_time and total_duration > 0:
+                        percentage = min((current_time / total_duration) * 100, 100)
+                        progress_obj.update(
+                            progress_task,
+                            completed=percentage,
+                            description=f"Processing video: {percentage:.1f}%",
+                        )
+                        last_time = current_time
+
+        stdout, stderr = process.communicate()
+    except KeyboardInterrupt:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+        raise
 
     return ProcessResult(process.returncode, stdout, stderr)
 
@@ -345,9 +364,15 @@ def process_video(
     keep_intervals: list[tuple[float, float]],
     output_file: str,
     total_duration: float,
+    enable_progressive: bool = False,
 ):
     def _process(progress, task):
-        filter_cmd = create_filter_complex_cmd(input_path, keep_intervals, output_file)
+        filter_cmd = create_filter_complex_cmd(
+            input_path,
+            keep_intervals,
+            output_file,
+            enable_progressive=enable_progressive,
+        )
         if not filter_cmd:
             console.print("[red]Could not create filter command[/red]")
             return False
@@ -404,7 +429,21 @@ def print_success_stats(
     )
 
 
+def signal_handler(signum, frame):
+    console.print("\n[yellow]Interrupted by user. Cleaning up...[/yellow]")
+    if os.path.exists("silence.log"):
+        try:
+            os.remove("silence.log")
+            console.print("[dim]Cleaned up temporary silence.log file[/dim]")
+        except OSError:
+            pass
+    console.print("[red]Operation cancelled.[/red]")
+    sys.exit(130)
+
+
 def main():
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = argparse.ArgumentParser(description="Remove silence from video files")
     parser.add_argument("-i", "--input", required=True, help="Input video file")
     parser.add_argument(
@@ -421,6 +460,11 @@ def main():
         help="Minimum silence duration to cut (seconds, default: 0.1)",
     )
     parser.add_argument("-o", "--output", required=True, help="Output file name")
+    parser.add_argument(
+        "--progressive",
+        action="store_true",
+        help="Enable progressive output (allows watching the file while it's being processed)",
+    )
 
     args = parser.parse_args()
 
@@ -430,11 +474,22 @@ def main():
 
     input_path = os.path.abspath(args.input)
 
+    if args.progressive and not args.output.lower().endswith(".mp4"):
+        console.print(
+            "[yellow]Warning:[/yellow] Progressive output works best with MP4 format. "
+            "Consider using .mp4 extension for optimal progressive viewing."
+        )
+
     console.print(
         Panel(
             f"[bold blue]Processing:[/bold blue] {args.input}\n"
             f"[bold green]Threshold:[/bold green] {args.threshold}, "
-            f"[bold green]Min duration:[/bold green] {args.duration}s",
+            f"[bold green]Min duration:[/bold green] {args.duration}s"
+            + (
+                "\n[bold cyan]Progressive output:[/bold cyan] Enabled"
+                if args.progressive
+                else ""
+            ),
             title="Video Silence Removal",
             border_style="blue",
         )
@@ -451,7 +506,16 @@ def main():
 
     print_processing_stats(silence_starts, silence_ends, total_duration)
 
-    if not process_video(input_path, keep_intervals, args.output, total_duration):
+    if args.progressive and args.output.lower().endswith(".mp4"):
+        console.print(
+            "[bold cyan]Progressive output enabled![/bold cyan] "
+            "You can start watching the file while it's being processed."
+        )
+        console.print(f"[dim]Output file: {args.output}[/dim]")
+
+    if not process_video(
+        input_path, keep_intervals, args.output, total_duration, args.progressive
+    ):
         sys.exit(1)
 
     print_success_stats(args.output, keep_intervals, total_duration)
